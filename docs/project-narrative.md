@@ -380,3 +380,46 @@
 - 参考实现的表结构是"它当时的需求"的产物，照搬会引入用不上的字段——移植时按"我现在真的需要什么"裁剪
 - 留了扩展余地但不预先埋字段：真要给投递关联简历/资料包时再加列（sqlite 加列成本低），而不是现在放一堆空列
 - 面试时讲：**"移植不是照抄表结构。参考库的投递表有简历路径、面试资料路径等列，我砍到只剩投递追踪真正需要的五个字段。用不上的字段现在不建——真需要时加列成本很低，预先埋一堆空列反而是负债。"**
+
+---
+
+## 迭代 3：以 PM 视角自审 + 上线 GitHub（CI 打通，2026-07-30）
+
+### 26. 用 PM 视角给自己的作品做一次评审，先修"闭环断裂"再修"门面"
+
+**背景**：迭代 2 的三块功能（面试/公司画像/投递追踪）都"能跑"，但我没急着提交，而是切换成资深 PM 视角，把工程从包边界、数据流、测试、CI、文档整体过了一遍。
+
+**审出的问题分级处理**：
+- 🔴 P0：**投递追踪的数据链路是断的**——`apply` 要一个 `jobId`，但这个 id 只有跑 `search` 采集才产生；`analyze`/`resume` 对粘贴的 JD 文本操作、全程不落库，用户根本拿不到 id。于是加了 `analyze --save`（落库返回 dbId）+ `list` 命令，把 `analyze --save → list → apply` 闭环打通。
+- 🔴 P0：**孤儿数据**——`node:sqlite` 默认不开外键，`apply 一个不存在的岗位`会静默插入、又被看板 INNER JOIN 藏起来。开 `PRAGMA foreign_keys=ON` + upsert 前置校验岗位存在并给可读报错。
+- 🟡 P1：DB 路径硬编码导致业务逻辑没法写测试——改成支持 `JOBOS_DB_PATH` 注入（含 `:memory:`），补了 5 个投递 CRUD 单测。
+- 🟢 P2：`engines.node` 写 `>=20` 但 `node:sqlite` 要 `>=22.5`——`>=20` 的用户 clone 直接跑不起来，修正。
+
+**主动不做**：公司画像原计划"补进 10 维评分"，评审后判断这是需要 `companies` 表 + 联查 + 权重设计的更大决策，**改 roadmap 措辞标注为独立查询能力**，而不是为了对齐描述去过度设计。
+
+**值得说的点**：
+- "功能能跑"和"功能可用"是两回事——投递追踪单独看每个命令都对，但串起来发现用户拿不到 jobId，这种"闭环断裂"只有站在用户全流程视角才看得见
+- 评审结论落成带优先级的清单（P0 可用性 > P1 完整性 > P2 打磨），先修让功能真正可用的，再修门面
+- 面试时讲：**"我写完功能不急着提交，会切成 PM/用户视角再审一遍。这次就审出投递追踪的数据链路是断的——每个命令单独都对，但用户根本拿不到串联它们的 jobId。我按'可用性 > 完整性 > 打磨'分级修，还主动把一个会过度设计的功能从计划里降级。判断什么不该做，和做本身一样重要。"**
+
+### 27. CI 连抓两个"本地能跑、干净环境挂"的 bug——这就是 CI 存在的理由
+
+**背景**：项目一直有 CI 配置和绿徽章，但仓库还没推上 GitHub，CI 从未真正运行过——等于挂了块招牌、机器却没通电。这次推上 GitHub 后 CI 首次真跑，**连挂两次**，每次都逮到一个我本地完全没暴露的问题。
+
+**第一个 bug——pnpm 构建脚本审批（19 秒挂在 install）**：
+- 现象：干净环境 `pnpm install --frozen-lockfile` 报 `ERR_PNPM_IGNORED_BUILDS: esbuild, sharp` 退出码 1
+- 根因：我升级 vite 时引入了新版 esbuild。本地因为有缓存和历史批准，install 直接"Already up to date"跳过检查；CI 从零装才触发。更深一层：pnpm 11.17 已经把批准机制从旧的 `onlyBuiltDependencies` 列表换成了 `allowBuilds` 映射，我一直在维护过时的字段，而 pnpm 自动生成的 `allowBuilds: { esbuild: set this to true or false }` 提示块被我忽略了
+- 修复：`allowBuilds: { esbuild: true, sharp: true }`——精确白名单，而非 `dangerouslyAllowAllBuilds` 那种放行一切
+
+**第二个 bug——typecheck 依赖构建产物（38 秒挂在 typecheck）**：
+- 现象：`cli/src/index.ts: TS2307: Cannot find module '@ai-job-os/resume-render'`
+- 根因：CI 里 typecheck 在 build 之前跑，而 `resume-render` 的 `exports.types` 指向 `./dist/index.d.ts`——全新环境 `dist/` 还不存在。本地能过是因为之前 build 过、`dist/` 有残留。对比之下 `core` 包的 exports 直连 `./src/index.ts`，任何时候都不依赖 build——`resume-render` 是那个不一致的"另类"
+- 修复：把 `resume-render` 的 `types`/`source` 都指向 `./src/index.ts`（与 core 对齐），typecheck 走源码；`import`/`default` 仍走 `dist` 供生产消费
+
+**关键方法**：两个修复我都不是盲改——**清空 `node_modules` + 所有 `dist` 本地复现 CI 的干净环境**，验证通过再推。第三次 CI 一次过。
+
+**值得说的点**：
+- CI 的核心价值就是"用全新环境模拟别人 clone 你的仓库"——本地的缓存、残留 `dist`、历史批准，全是骗你"没问题"的假象。招聘方 clone 你的作品用的正是干净环境
+- 两个 bug 都源于同一类问题：**本地状态泄漏**（依赖缓存、构建产物残留）掩盖了真实的可复现性缺陷
+- 修 CI 问题的正确姿势是在本地重建那个干净环境去复现，而不是"改一版推上去碰运气"——碰运气会把 CI 历史搞得一堆红叉，本身就是减分
+- 面试时讲：**"我把作品推上 GitHub 后 CI 连挂两次，都是本地缓存和残留 dist 掩盖掉的可复现性 bug——一个是 pnpm 新版换了构建审批机制、一个是 typecheck 依赖了还没生成的 dist。我的修法是本地清空 node_modules 和所有 dist、复现 CI 的干净环境、验证通过再推，第三次一次过。CI 的意义就是替你模拟别人 clone 你代码的场景，本地那些'能跑'很多时候是状态泄漏骗你的。"**
