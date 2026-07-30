@@ -1,0 +1,23 @@
+{
+  "name": "@ai-job-os/core",
+  "version": "0.1.0",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./llm": "./src/llm/index.ts",
+    "./db": "./src/db/index.ts",
+    "./agents": "./src/agents/index.ts"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.32.0",
+    "openai": "^4.73.0",
+    "yaml": "^2.6.0",
+    "zod": "^4.4.3"
+  }
+}

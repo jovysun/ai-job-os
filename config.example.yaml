@@ -1,0 +1,40 @@
+# 复制本文件为 config.local.yaml 并填入真实配置（config.local.yaml 已 gitignore）。
+# API key 推荐用环境变量：OPENAI_API_KEY / ANTHROPIC_API_KEY（优先级高于本文件）。
+
+llm:
+  # provider 二选一：anthropic（Claude 官方）| openai（任何 OpenAI 兼容端点）
+  provider: openai
+  model: deepseek-chat
+  base_url: https://api.deepseek.com/v1
+  api_key: YOUR_API_KEY   # 留空并用环境变量更安全
+  max_tokens: 4096
+  temperature: 0.7
+
+search:
+  default_location: 南京
+  default_keywords:
+    - 前端开发
+    - 高级前端
+    - React
+    - Vue
+    - 全栈开发
+    - Node.js
+    - TypeScript
+  platforms:
+    - boss
+
+scoring:
+  weights:
+    roleMatch: 0.18
+    skillAlignment: 0.17
+    salary: 0.12
+    cashFlowStability: 0.10
+    location: 0.10
+    techStack: 0.09
+    growthPotential: 0.08
+    companyStage: 0.06
+    interviewDifficulty: 0.05
+    workLifeBalance: 0.05
+  gate_threshold: 0.4
+  display_recommend: 0.65
+  display_consider: 0.45

@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "jobos": {
+      "command": "pnpm",
+      "args": ["--filter", "@ai-job-os/mcp", "start"],
+      "cwd": "."
+    }
+  }
+}

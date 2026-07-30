@@ -1,0 +1,19 @@
+{
+  "name": "@ai-job-os/cli",
+  "version": "0.1.0",
+  "type": "module",
+  "bin": {
+    "jobos": "./src/index.ts"
+  },
+  "scripts": {
+    "start": "tsx src/index.ts",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@ai-job-os/core": "workspace:*",
+    "@ai-job-os/resume-render": "workspace:*",
+    "@ai-job-os/crawlers": "workspace:*",
+    "commander": "^12.1.0",
+    "picocolors": "^1.1.0"
+  }
+}

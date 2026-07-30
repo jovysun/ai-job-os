@@ -1,0 +1,6 @@
+packages:
+  - "packages/*"
+
+# sharp（Next.js 图片优化）用预编译二进制，允许其 build 脚本以消除安装告警
+onlyBuiltDependencies:
+  - sharp

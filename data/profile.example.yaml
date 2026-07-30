@@ -1,0 +1,110 @@
+# 求职者档案示例 —— 复制为 data/profile.yaml 并填入你的真实信息。
+# data/profile.yaml 已被 gitignore（含个人隐私，不上传）。
+# 供评分（analyst）、简历定制（tailor）、面试准备（coach）读取。
+# 所有内容必须真实——tailor 的起草-审阅闭环以本文件为唯一事实来源，严禁编造。
+
+basics:
+  name: 张三
+  email: your_email@example.com
+  phone: "13800000000"
+  github: https://github.com/yourname
+  location: 南京
+  gender: 男
+  age: 30
+  years_of_experience: 8
+  target_role: 前端开发工程师 / 高级前端 / 全栈开发
+  target_type: 全职 / 社招
+  salary_expectation: 20-30K
+  education:
+    - school: 示例大学
+      degree: 本科
+      major: 计算机科学与技术
+      start_date: "2013"
+      end_date: "2017"
+      gpa: ""
+
+# 一句话定位：用于简历个人总结的锚点，突出核心技术栈与差异化经历。
+summary: >-
+  8 年前端开发经验，React + Vue 双栈实战，TypeScript 深度使用。
+  主导多套中后台系统从 0 到 1，具备前端工程化与全栈整合能力，有 AI 协同开发实战。
+
+skills:
+  languages:
+    - TypeScript
+    - JavaScript (ES2015+)
+    - HTML5/CSS3
+    - Node.js
+  frameworks:
+    - React
+    - Vue 2/3
+    - Koa.js
+    - Express
+  engineering:
+    - Webpack
+    - Vite
+    - Monorepo
+    - ESLint/Prettier
+  state_management:
+    - Zustand
+    - Redux / Redux Toolkit
+  backend:
+    - Node.js
+    - MySQL
+    - RESTful API
+  ai_collaboration:
+    - Cursor
+    - Claude Code
+    - MCP Server
+  testing:
+    - vitest
+    - 单元测试
+  tools:
+    - Git/GitHub
+
+# 项目经历（每个项目必须有 name + description）。全部来源于真实经历，严禁虚构或夸大。
+projects:
+  - name: "示例项目 · 中后台管理系统群"
+    company: 某科技公司
+    period: "2019.01 - 2024.12"
+    description: "负责公司多套后台管理系统的前端开发与架构工作"
+    highlights:
+      - "主导多套后台系统从 0 到 1 建设，技术栈覆盖 React、Vue"
+      - "设计通用列表配置系统，被多个业务线复用，显著降低新页面开发成本"
+      - "推动构建工具升级（webpack→Vite），构建提速约 70%"
+    technologies:
+      - React
+      - Vue
+      - TypeScript
+      - Vite
+
+  - name: "示例项目 · 内部 AI 工具链"
+    company: 某科技公司
+    period: "2024.01 - 2024.03"
+    description: "独立完成内部 MCP 工具包从设计到上线"
+    highlights:
+      - "独立完成设计到上线全流程，快速交付并部署生产环境"
+      - "适配多类 Agent 工具，提升团队研发效率"
+    technologies:
+      - MCP Server
+      - Node.js
+
+work_history:
+  - company: 某科技公司
+    title: 前端开发工程师
+    period: "2019.01 - 2024.12"
+    note: 中后台前端主力开发
+  - company: 另一家公司
+    title: 前端工程师
+    period: "2017.06 - 2018.12"
+    note: 参与 C 端产品前端开发
+
+preferences:
+  location: 南京
+  remote_ok: true
+  priorities:
+    - 稳定现金流
+    - 通勤便利
+    - 技术方向匹配（前端/全栈/AI 应用落地）
+    - 长期成长空间
+  avoid:
+    - 强陌生销售型岗位

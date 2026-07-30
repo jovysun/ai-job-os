@@ -1,0 +1,18 @@
+{
+  "name": "@ai-job-os/mcp",
+  "version": "0.1.0",
+  "type": "module",
+  "bin": {
+    "jobos-mcp": "./src/server.ts"
+  },
+  "scripts": {
+    "start": "tsx src/server.ts",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@ai-job-os/core": "workspace:*",
+    "@ai-job-os/crawlers": "workspace:*",
+    "@modelcontextprotocol/sdk": "^1.30.0",
+    "zod": "^4.4.3"
+  }
+}

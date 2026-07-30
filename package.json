@@ -1,0 +1,23 @@
+{
+  "name": "ai-job-os",
+  "version": "0.1.0",
+  "private": true,
+  "description": "AI 求职操作系统 —— 多平台岗位采集、10 维评分、简历定制、面试准备",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "pnpm -r build",
+    "typecheck": "pnpm -r typecheck",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "jobos": "pnpm --filter @ai-job-os/cli start"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.7.0",
+    "vitest": "^2.1.0"
+  }
+}
