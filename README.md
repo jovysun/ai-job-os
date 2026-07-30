@@ -121,7 +121,11 @@ pnpm --filter @ai-job-os/web dev   # http://localhost:3000
 ```bash
 pnpm typecheck   # 全包类型检查
 pnpm test        # vitest 单元测试
+pnpm -r build    # 全包构建
 ```
+
+> 工程规范见 [`CLAUDE.md`](./CLAUDE.md)——包边界、LLM Agent 编写模式、数据层约定、Quality Gate、安全规范与落地检查清单。人类与 AI Agent 迭代前都应先阅读。
+
 
 ## 路线图
 
