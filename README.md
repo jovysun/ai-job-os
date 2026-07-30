@@ -88,11 +88,20 @@ export OPENAI_API_KEY=sk-xxx    # 或写进 config.local.yaml
 pnpm jobos analyze "高级前端开发工程师，React/Vue/TS，南京，15-20K"
 pnpm jobos analyze "高级前端开发工程师，React/Vue/TS，南京，15-20K" --save
 
-# 根据 JD 生成定制简历 PDF（起草→事实核查→修订 闭环）
-pnpm jobos resume "高级前端开发工程师，React/Vue/TS，南京，15-20K" -o data/outputs/resume.pdf
+# 💡 整段 JD 通常含换行/引号/特殊字符，直接贴命令行会被 shell 截断。
+#    analyze / resume / interview 三个命令都支持从「文件」或「stdin 管道」读 JD：
+#    ① 文件（推荐，随便粘进 jd.txt，格式不用管）：
+pnpm jobos analyze -f jd.txt --save
+#    ② 剪贴板管道（复制 JD 后直接跑，连文件都不用建）：
+#       Windows: powershell -c Get-Clipboard | pnpm jobos analyze --save
+#       macOS:   pbpaste                  | pnpm jobos analyze --save
+#       Linux:   xclip -o -selection clipboard | pnpm jobos analyze --save
+
+# 根据 JD 生成定制简历 PDF（起草→事实核查→修订 闭环）；-f 同样可读文件
+pnpm jobos resume -f jd.txt -o data/outputs/resume.pdf
 
 # 根据 JD 生成面试资料包（技能树 + 备考路径 + 八股 + 模拟面试）
-pnpm jobos interview "高级前端开发工程师，React/Vue/TS，南京，15-20K" -o data/outputs/interview.md
+pnpm jobos interview -f jd.txt --with-resume -o data/outputs/interview.md
 
 # 生成公司画像
 pnpm jobos company "字节跳动"

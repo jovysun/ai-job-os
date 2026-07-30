@@ -79,6 +79,14 @@ data/            # profile.yaml / jobs.db / fonts / cookies —— 全部 gitign
 
 ---
 
+## 6.5 CLI 输入约定（cli）
+
+- **大段文本输入（如 JD）不走命令行位置参数**——多行/引号/`$`/括号会被 shell 截断或误解析。统一用 `jd-input.ts` 的 `resolveJdText()`：优先级 **`--file` 文件 > stdin 管道 > 位置参数**，三者皆空抛可读错误并给出三平台（Windows/macOS/Linux）用法示例。
+- 吃 JD 的命令（`analyze`/`resume`/`interview`）位置参数用 `[jdText]`（可选）而非 `<jdText>`（必填），并加 `-f, --file <path>` 选项。
+- 输入解析逻辑抽成独立模块（`jd-input.ts`）并单测（`test/jd-input.test.ts`，注入 `readPiped` 模拟 stdin）——**不要把逻辑埋在 `.action()` 里导致无法测试**。处理 UTF-8 BOM（Windows 记事本另存常带）。
+
+---
+
 ## 7. TypeScript / 代码风格
 
 - **全项目 strict**，且 `tsconfig.base.json` 开了 `noUncheckedIndexedAccess` / `noImplicitOverride` / `noFallthroughCasesInSwitch`。所有包 `extends` 这个 base。

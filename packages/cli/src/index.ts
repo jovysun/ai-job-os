@@ -7,6 +7,7 @@ import pc from "picocolors";
 import { loadConfig, agents, db } from "@ai-job-os/core";
 import { renderResumeToFile } from "@ai-job-os/resume-render";
 import { collectAllJobs, type Platform } from "@ai-job-os/crawlers";
+import { resolveJdText } from "./jd-input.js";
 
 // 仓库根：packages/cli/src → ../../../。相对路径统一以仓库根为基准，
 // 避免 pnpm --filter 把 cwd 切到包目录导致的路径错乱。
@@ -19,6 +20,11 @@ function resolveOutput(p: string): string {
   return abs;
 }
 
+/** 统一读取 JD（文件 > stdin > 位置参数），基准目录为仓库根。 */
+function readJd(arg: string | undefined, file: string | undefined): Promise<string> {
+  return resolveJdText({ arg, file, baseDir: REPO_ROOT });
+}
+
 const program = new Command();
 
 program
@@ -29,9 +35,11 @@ program
 program
   .command("analyze")
   .description("分析一段 JD 文本并做 10 维评分")
-  .argument("<jdText>", "岗位 JD 文本")
+  .argument("[jdText]", "岗位 JD 文本（可省略，改用 -f 文件或 stdin 管道）")
+  .option("-f, --file <path>", "从文件读取 JD（推荐，避免多行文本被 shell 截断）")
   .option("--save", "把岗位与评分存入本地库，输出 dbId（供 apply 追踪投递）", false)
-  .action(async (jdText: string, opts: { save: boolean }) => {
+  .action(async (jdArg: string | undefined, opts: { file?: string; save: boolean }) => {
+    const jdText = await readJd(jdArg, opts.file);
     const cfg = loadConfig().scoring;
     console.log(pc.dim("正在分析 JD…"));
     const jdInfo = await agents.analyzeJd(jdText);
@@ -109,9 +117,11 @@ program
 program
   .command("resume")
   .description("根据 JD 生成定制简历 PDF（起草→事实核查→修订 闭环）")
-  .argument("<jdText>", "岗位 JD 文本")
+  .argument("[jdText]", "岗位 JD 文本（可省略，改用 -f 文件或 stdin 管道）")
+  .option("-f, --file <path>", "从文件读取 JD（推荐，避免多行文本被 shell 截断）")
   .option("-o, --output <path>", "输出 PDF 路径", "data/outputs/resume.pdf")
-  .action(async (jdText: string, opts: { output: string }) => {
+  .action(async (jdArg: string | undefined, opts: { file?: string; output: string }) => {
+    const jdText = await readJd(jdArg, opts.file);
     console.log(pc.dim("正在分析 JD…"));
     const jdInfo = await agents.analyzeJd(jdText);
     console.log(pc.cyan(`岗位: ${jdInfo.title} @ ${jdInfo.company}`));
@@ -140,56 +150,63 @@ program
 program
   .command("interview")
   .description("根据 JD 生成面试资料包（技能树 + 备考路径 + 八股速查 + 模拟面试）")
-  .argument("<jdText>", "岗位 JD 文本")
+  .argument("[jdText]", "岗位 JD 文本（可省略，改用 -f 文件或 stdin 管道）")
+  .option("-f, --file <path>", "从文件读取 JD（推荐，避免多行文本被 shell 截断）")
   .option("-o, --output <path>", "输出 Markdown 路径", "data/outputs/interview.md")
   .option("--with-resume", "先生成定制简历，供模拟面试题参考", false)
-  .action(async (jdText: string, opts: { output: string; withResume: boolean }) => {
-    console.log(pc.dim("正在分析 JD…"));
-    const jdInfo = await agents.analyzeJd(jdText);
-    console.log(pc.cyan(`岗位: ${jdInfo.title} @ ${jdInfo.company}`));
+  .action(
+    async (
+      jdArg: string | undefined,
+      opts: { file?: string; output: string; withResume: boolean },
+    ) => {
+      const jdText = await readJd(jdArg, opts.file);
+      console.log(pc.dim("正在分析 JD…"));
+      const jdInfo = await agents.analyzeJd(jdText);
+      console.log(pc.cyan(`岗位: ${jdInfo.title} @ ${jdInfo.company}`));
 
-    let resume;
-    if (opts.withResume) {
-      console.log(pc.dim("生成定制简历（供模拟面试参考）…"));
-      resume = (await agents.tailorResume(jdInfo)).resume;
-    }
+      let resume;
+      if (opts.withResume) {
+        console.log(pc.dim("生成定制简历（供模拟面试参考）…"));
+        resume = (await agents.tailorResume(jdInfo)).resume;
+      }
 
-    console.log(pc.dim("提取技能树 + 生成备考路径 / 八股速查 / 模拟面试…"));
-    const pack = await agents.generateInterviewPack(jdInfo, resume);
+      console.log(pc.dim("提取技能树 + 生成备考路径 / 八股速查 / 模拟面试…"));
+      const pack = await agents.generateInterviewPack(jdInfo, resume);
 
-    console.log(
-      pc.green(
-        `\n✓ 技能树: 必需 ${pack.skillTree.required.length} / 加分 ${pack.skillTree.preferred.length} / 基础 ${pack.skillTree.basic.length}`,
-      ),
-    );
+      console.log(
+        pc.green(
+          `\n✓ 技能树: 必需 ${pack.skillTree.required.length} / 加分 ${pack.skillTree.preferred.length} / 基础 ${pack.skillTree.basic.length}`,
+        ),
+      );
 
-    const md = [
-      `# 面试资料包 — ${jdInfo.title} @ ${jdInfo.company}`,
-      "",
-      "## 技能树",
-      "",
-      "```json",
-      JSON.stringify(pack.skillTree, null, 2),
-      "```",
-      "",
-      "## 备考路径",
-      "",
-      pack.studyPath,
-      "",
-      "## 八股速查",
-      "",
-      pack.eightPartEssay,
-      "",
-      "## 模拟面试",
-      "",
-      pack.mockQuestions,
-      "",
-    ].join("\n");
+      const md = [
+        `# 面试资料包 — ${jdInfo.title} @ ${jdInfo.company}`,
+        "",
+        "## 技能树",
+        "",
+        "```json",
+        JSON.stringify(pack.skillTree, null, 2),
+        "```",
+        "",
+        "## 备考路径",
+        "",
+        pack.studyPath,
+        "",
+        "## 八股速查",
+        "",
+        pack.eightPartEssay,
+        "",
+        "## 模拟面试",
+        "",
+        pack.mockQuestions,
+        "",
+      ].join("\n");
 
-    const outPath = resolveOutput(opts.output);
-    writeFileSync(outPath, md, "utf-8");
-    console.log(pc.green(`✓ 面试资料包已生成: ${outPath}`));
-  });
+      const outPath = resolveOutput(opts.output);
+      writeFileSync(outPath, md, "utf-8");
+      console.log(pc.green(`✓ 面试资料包已生成: ${outPath}`));
+    },
+  );
 
 program
   .command("company")
