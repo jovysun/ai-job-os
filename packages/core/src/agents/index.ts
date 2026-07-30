@@ -1,4 +1,4 @@
-export { analyzeJd, scoreJob, formatJdText } from "./analyst.js";
+export { analyzeJd, scoreJob, formatJdText, profileCompany } from "./analyst.js";
 export {
   generateTailoredResume,
   reviewResume,
@@ -9,11 +9,25 @@ export {
 } from "./tailor.js";
 export { loadProfile, clearProfileCache, type Profile } from "./profile.js";
 export {
+  extractSkillTree,
+  generateStudyPath,
+  generateEightPartEssay,
+  generateMockQuestions,
+  generateInterviewPack,
+  SkillNodeSchema,
+  SkillTreeSchema,
+  type SkillNode,
+  type SkillTree,
+  type InterviewPack,
+} from "./coach.js";
+export {
   JdInfoSchema,
   RawScoreSchema,
+  CompanyProfileSchema,
   type JdInfo,
   type RawScore,
   type ScoreResult,
+  type CompanyProfile,
 } from "./schemas.js";
 export {
   ResumeDataSchema,

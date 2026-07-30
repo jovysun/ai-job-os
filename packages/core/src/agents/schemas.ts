@@ -38,3 +38,21 @@ export interface ScoreResult {
   total: number;
   details: RawScore & { total: number };
 }
+
+/**
+ * 公司画像 LLM 返回结构。rating 0-10；软性字段容忍 null。
+ */
+export const CompanyProfileSchema = z.object({
+  name: nullableString(),
+  industry: nullableString(),
+  size: nullableString(),
+  description: nullableString(),
+  rating: z.number().default(0),
+  pros: flexibleStringArray(),
+  cons: flexibleStringArray(),
+  avgSalary: nullableString(),
+  workLifeBalance: nullableString(),
+  techReputation: nullableString(),
+});
+
+export type CompanyProfile = z.infer<typeof CompanyProfileSchema>;

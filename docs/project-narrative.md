@@ -329,3 +329,54 @@
 - 核心领悟：**"CLI 能跑、Web 崩"往往是模块打包环境差异**。含 wasm/原生/独立 reconciler 的库（react-pdf、playwright）在 bundler 里都得 externalize，让它们回到 Node 的模块体系
 - 条件 `exports`（source/import 分流）是 monorepo 里"开发消费源码、生产消费编译产物"的标准解法
 - 面试时讲：**"用户报简历生成崩溃，一个 reading 'S' 的错。剥开发现是三层：react-pdf 被 webpack 打包破坏了 wasm 引擎、externalize 后又和转译代码的 React 实例对不上、修完这些又暴露出 LLM 返回 null 的 schema 漏洞。最外层的问题把里层全遮住了。最后用条件 exports 让 PDF 渲染回到 Node 模块体系——和 CLI 能跑通的环境一致。"**
+
+---
+
+## 迭代 2：把作品补成求职全链路（P1-P3，2026-07-30）
+
+### 22. 对照两个 Python 开源库做「差距分析」，只挑对作品加分的功能移植
+
+**背景**：核心路线（里程碑 1-4）完成后，我把 TS 版对照了两个参考库——JobOS（`agents/coach.py`、`analyst.py`）和 ai-job-search（`outcome`/`rank` 命令），逐一列出「Python 有、TS 还没有」的能力，写进 `docs/todo-roadmap.md` 并按优先级排序。
+
+**决策**：不做全量对齐，而是按「对作品叙事的价值 / 成本」筛选。三项入选：P1 面试资料生成（把链路补全成 采集→评分→简历→**面试**）、P2 公司画像（补进评分维度）、P3 投递追踪（从"生成材料"延伸到"闭环管理"）。**明确不做自动投递**——封号风险高，且对作品是减分项（易被视为灰产工具）。
+
+**值得说的点**：
+- "会做"和"该做"是两回事——自动投递技术上最容易移植，但我主动放弃，因为它伤害作品定位
+- 差距分析落成一份带优先级和「明确不做」清单的 roadmap 文档，而不是拍脑袋加功能
+- 面试时讲：**"我对照参考实现做了差距分析，但没有全量对齐。我按'对作品价值'筛选功能——把面试准备补进链路是加分的，自动投递技术上最简单但我删掉了，因为它会让作品看起来像灰产工具。取舍比堆功能更能体现判断力。"**
+
+### 23. coach agent：把「一次串行」改成「一次并行」
+
+**背景**：移植 JobOS 的 `coach.py` 时，`generate_interview_pack` 原本是四步串行——提技能树 → 学习路径 → 八股速查 → 模拟面试。后三步都只依赖第一步产出的技能树（模拟面试还额外吃 JD 和简历），彼此之间没有依赖。
+
+**决策**：TS 版 `generateInterviewPack` 里，先 `await extractSkillTree`，然后把后三个生成用 `Promise.all` 并行。四次 LLM 调用（每次可能十几秒）从"串行累加"变成"技能树 + 三者并行"，墙钟时间大致砍掉一半多。
+
+**值得说的点**：
+- 移植不是逐行翻译——识别出 Python 版里可以并行却被写成串行的地方，是"迁移"高于"翻译"的体现
+- 依赖关系判断：技能树是三者的共同输入，必须先算；三者之间无依赖，可并行
+- 沿用了项目既有的 LLM 工程约定——技能树走 `chatJson(prompt, SkillTreeSchema)`（结构化、要校验），三段长文本走 `chat(prompt, { maxTokens: 8000 })`（Markdown，不需要 schema）
+- 面试时讲：**"移植 Python 版面试资料生成时，我发现它四步串行，但后三步只依赖第一步的技能树、彼此独立。我改成技能树先算、后三段并行 Promise.all——四次 LLM 调用的墙钟时间砍掉一半多。移植代码时顺手把能并行的串行逻辑并行掉，这是翻译代码不会做、迁移代码才会做的事。"**
+
+### 24. 投递追踪：用 `ON CONFLICT + COALESCE` 让「重复投递」变成安全的幂等更新
+
+**背景**：P3 要给每个岗位记录投递进展（未投递→已投递→笔试→一面→…→Offer/拒绝/放弃）。问题是：用户可能对同一岗位反复调 `apply`/`status`，怎么保证不产生重复记录、也不误删已填的信息？
+
+**决策**：`applications` 表对 `job_id` 加唯一约束，`upsertApplication` 用 `INSERT ... ON CONFLICT(job_id) DO UPDATE`。关键在 update 分支用 `COALESCE`：`applied_at = COALESCE(applications.applied_at, excluded.applied_at)`——已有的首投时间不被覆盖；`notes = COALESCE(excluded.notes, applications.notes)`——这次没传备注就保留上次的。首次进入非「未投递」状态时自动补 `applied_at`。
+
+**值得说的点**：
+- 幂等性放在 SQL 层，而不是应用层写一堆 if/else 先查后改——一条语句既是插入也是更新，无竞态
+- `COALESCE` 的两个方向刚好相反：`applied_at` 保护"已有的旧值"（首投时间只记一次），`notes` 优先"新传的值、否则留旧的"——这个不对称是刻意的
+- 状态枚举 `APPLICATION_STATUSES` 用 `as const` 定成联合类型，CLI 侧 `assertStatus` 做运行时校验，非法状态直接报错列出可选值——和项目"LLM/用户输入都不可信"的一贯风格一致
+- 用真实 sqlite 冒烟验证了全链路（插入岗位→投递→改状态→看板 join→按状态过滤），确认 `applied_at`/`notes` 在状态更新后确实被 COALESCE 保住
+- 面试时讲：**"投递追踪我把幂等性做在 SQL 层——job_id 唯一约束 + ON CONFLICT DO UPDATE，一条语句既插入又更新。关键是 COALESCE 的两个方向是反的：首投时间用 COALESCE 保护旧值只记一次，备注用 COALESCE 优先新值、没传就留旧的。用户怎么反复调 apply 都不会丢数据、不会产生重复行。"**
+
+### 25. 移植也要做减法：applications 表砍掉参考库里暂时用不上的列
+
+**背景**：Python 版 `db.py` 的 `applications` 表有 `resume_path`、`interview_pack_path` 等列，还有一张独立的 `interview_materials` 表存面试资料。
+
+**决策**：TS 版的 `applications` 表只保留 `job_id / status / applied_at / notes / updated_at`——投递追踪当前需要的最小集。面试资料（P1）目前直接输出成 Markdown 文件，没有落库需求，所以不建 `interview_materials` 表，也不加 `interview_pack_path` 列。
+
+**值得说的点**：
+- 参考实现的表结构是"它当时的需求"的产物，照搬会引入用不上的字段——移植时按"我现在真的需要什么"裁剪
+- 留了扩展余地但不预先埋字段：真要给投递关联简历/资料包时再加列（sqlite 加列成本低），而不是现在放一堆空列
+- 面试时讲：**"移植不是照抄表结构。参考库的投递表有简历路径、面试资料路径等列，我砍到只剩投递追踪真正需要的五个字段。用不上的字段现在不建——真需要时加列成本很低，预先埋一堆空列反而是负债。"**

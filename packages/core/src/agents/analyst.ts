@@ -4,8 +4,10 @@ import { loadProfile } from "./profile.js";
 import {
   JdInfoSchema,
   RawScoreSchema,
+  CompanyProfileSchema,
   type JdInfo,
   type ScoreResult,
+  type CompanyProfile,
 } from "./schemas.js";
 
 /** 把岗位对象拼成供 analyzeJd 使用的 JD 文本（统一各处拼接）。 */
@@ -113,4 +115,28 @@ ${JSON.stringify(jdInfo, null, 2)}
   total = Math.round(total * 1000) / 1000;
 
   return { total, details: { ...scores, total } };
+}
+
+/**
+ * 生成公司画像：行业/规模/评分/优缺点/薪资/加班/技术口碑。
+ * 补进评分体系，给候选人公司维度的信息。
+ */
+export async function profileCompany(companyName: string): Promise<CompanyProfile> {
+  const prompt = `分析公司"${companyName}"，生成公司画像。
+
+请返回JSON:
+{
+  "name": "${companyName}",
+  "industry": "所属行业",
+  "size": "公司规模(人数)",
+  "description": "一句话描述",
+  "rating": 7.5,
+  "pros": ["优点1", "优点2"],
+  "cons": ["缺点1", "缺点2"],
+  "avgSalary": "该公司前端/全栈岗平均月薪",
+  "workLifeBalance": "加班情况描述",
+  "techReputation": "技术口碑"
+}`;
+
+  return chatJson(prompt, CompanyProfileSchema);
 }

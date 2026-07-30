@@ -102,6 +102,46 @@ server.registerTool(
   },
 );
 
+server.registerTool(
+  "jobos_interview",
+  {
+    title: "生成面试资料包",
+    description:
+      "根据 JD 生成面试资料包：技能树（三级分类）+ 备考路径 + 八股速查 + 15 题模拟面试",
+    inputSchema: {
+      jdText: z.string().describe("岗位 JD 文本"),
+      withResume: z
+        .boolean()
+        .optional()
+        .describe("是否先生成定制简历供模拟面试题参考，默认 false"),
+    },
+  },
+  async ({ jdText, withResume }) => {
+    const jdInfo = await agents.analyzeJd(jdText);
+    const resume = withResume
+      ? (await agents.tailorResume(jdInfo)).resume
+      : undefined;
+    const pack = await agents.generateInterviewPack(jdInfo, resume);
+    return textResult(pack);
+  },
+);
+
+server.registerTool(
+  "jobos_company",
+  {
+    title: "生成公司画像",
+    description:
+      "生成公司画像 JSON：行业/规模/评分/优缺点/平均薪资/加班情况/技术口碑",
+    inputSchema: {
+      companyName: z.string().describe("公司名称"),
+    },
+  },
+  async ({ companyName }) => {
+    const profile = await agents.profileCompany(companyName);
+    return textResult(profile);
+  },
+);
+
 async function main(): Promise<void> {
   const transport = new StdioServerTransport();
   await server.connect(transport);

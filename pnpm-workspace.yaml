@@ -1,6 +1,8 @@
 packages:
   - "packages/*"
 
-# sharp（Next.js 图片优化）用预编译二进制，允许其 build 脚本以消除安装告警
+# 预编译二进制依赖，允许其 build 脚本以消除安装告警：
+# sharp（Next.js 图片优化）、esbuild（vitest/vite 依赖）
 onlyBuiltDependencies:
   - sharp
+  - esbuild
